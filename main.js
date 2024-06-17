@@ -30,7 +30,7 @@ scrapeSite(keyword)
   .then((result) => {
     let link = `${result.results[0].imgSrc}`;
     link = link.slice(0, -10).concat("", "v.jpg");
-    console.log(link);
+    console.loggit(link);
 
     let data = `${result.lis[0].li}`;
     const desc = data.split("\n");
@@ -41,10 +41,18 @@ scrapeSite(keyword)
 
 function noSpace(array) {
   const out = [];
+  let isLine = false;
   for (let ele of array) {
-    if (ele.replace(/\s/g, "") !== "") {
-      out.push(ele);
-    }
+    if (ele.replace(/\s/g, "") !== "" && ele.replace(/\s/g, "") !== "-")
+      if (isLine) {
+        out.push("- ".concat("", ele.trim()));
+        isLine = false;
+      } else {
+        out.push(ele.trim());
+      }
+
+    if (ele.trim() === "-") isLine = true;
+    else false;
   }
   return out;
 }
