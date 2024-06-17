@@ -1,50 +1,45 @@
 const axios = require("axios");
-const cheerio = require("cheerio"); // new addition
+const cheerio = require("cheerio");
 
 async function scrapeSite(keyword) {
   const url = `https://www.loc.gov/item/${keyword}/`;
 
   const { data } = await axios.get(url);
-  const $ = cheerio.load(data); // new addition
-  const lis = [];
+  const $ = cheerio.load(data);
+
   const results = [];
+  
+  // Extract item titles and their corresponding list items
+  $("div.item-cataloged-data").each((i, elem) => {
+    const liText = $(elem).find("ul").find("li").first().text().trim();
+      results.push({ title: liText });
+  });
+
+  // Extract image sources
   $("div.preview").each((i, elem) => {
     const imgSrc = $(elem).find("img").attr("src");
-    // const text = $(elem).find("span:first-child").text();
-    // results.push({ imgSrc, text });
     results.push({ imgSrc });
   });
-  $("div.item-cataloged-data").each((i, elem) => {
-    const li = $(elem).find("li").text();
-    // const text = $(elem).find("span:first-child").text();
-    // results.push({ imgSrc, text });
-    lis.push({ li });
-  });
 
-  return { results, lis };
+
+  return results;
 }
 
-const keyword = "2014703221"; // change with any keyword you want
+const keyword = "2014703222"; // change with any keyword you want
 
 scrapeSite(keyword)
-  .then((result) => {
-    let link = `${result.results[0].imgSrc}`;
-    link = link.slice(0, -10).concat("", "v.jpg");
-    console.log(link);
-
-    let data = `${result.lis[0].li}`;
-    const desc = data.split("\n");
-    const hope = noSpace(desc);
-    console.log(hope);
+  .then((results) => {
+    results.forEach((result) => {
+      if (result.imgSrc) {
+        let link = result.imgSrc.slice(0, -10).concat("", "v.jpg");
+       console.log(link);
+      } else {
+        console.log(`Title: ${result.title}`);
+      }
+    });
   })
   .catch((err) => console.log(err));
 
-function noSpace(array) {
-  const out = [];
-  for (let ele of array) {
-    if (ele.replace(/\s/g, "") !== "") {
-      out.push(ele);
-    }
-  }
-  return out;
-}
+// function noSpace(array) {
+//   return array.filter((ele) => ele.replace(/\s/g, "") !== "");
+// }
