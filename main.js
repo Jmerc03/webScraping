@@ -9,17 +9,18 @@ async function scrapeSite(keyword) {
 
   const results = [];
   
+  // Extract image sources
+  $("div.preview").each((i, elem) => {
+    const imgSrc = $(elem).find("img").attr("src");
+    results.push({ imgSrc });
+  });
+
   // Extract item titles and their corresponding list items
   $("div.item-cataloged-data").each((i, elem) => {
     const liText = $(elem).find("ul").find("li").first().text().trim();
       results.push({ title: liText });
   });
 
-  // Extract image sources
-  $("div.preview").each((i, elem) => {
-    const imgSrc = $(elem).find("img").attr("src");
-    results.push({ imgSrc });
-  });
 
 
   return results;
