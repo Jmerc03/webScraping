@@ -1,58 +1,8 @@
 const axios = require("axios");
-const cheerio = require("cheerio"); // new addition
+const cheerio = require("cheerio");
 const fs = require("fs"),
   request = require("request");
 
-async function scrapeSite(keyword, i) {
-  const url = `https://www.loc.gov/item/${keyword}/`;
-
-  const { data } = await axios.get(url);
-  const $ = cheerio.load(data); // new addition
-  const lis = [];
-  const results = [];
-  $("div.preview").each((i, elem) => {
-    const imgSrc = $(elem).find("img").attr("src");
-    // const text = $(elem).find("span:first-child").text();
-    // results.push({ imgSrc, text });
-    results.push({ imgSrc });
-  });
-  $("div.item-cataloged-data").each((i, elem) => {
-    const li = $(elem).find("ul").text();
-    // const text = $(elem).find("span:first-child").text();
-    // results.push({ imgSrc, text });
-    lis.push({ li });
-  });
-
-  return { results, lis, i };
-}
-function download(uri, filename, callback) {
-  request.head(uri, function (err, res, body) {
-    console.log("content-type:", res.headers["content-type"]);
-    console.log("content-length:", res.headers["content-length"]);
-
-    request(uri).pipe(fs.createWriteStream(filename)).on("close", callback);
-  });
-}
-
-function noSpace(array) {
-  const out = [];
-  let isLine = false;
-  for (let ele of array) {
-    if (ele.replace(/\s/g, "") !== "" && ele.replace(/\s/g, "") !== "-")
-      if (isLine) {
-        out.push("- ".concat("", ele.trim()));
-        isLine = false;
-      } else {
-        out.push(ele.trim());
-      }
-
-    if (ele.trim() === "-") isLine = true;
-    else false;
-  }
-  return out;
-}
-
-//object constructor function
 function Image(LCCN) {
   this.link = "";
   this.title = "";
@@ -101,19 +51,63 @@ function Image(LCCN) {
   };
 }
 
-const keywords = [];
-for (let i = 0; i < 10; i++) {
-  console.log((i + 2014703221).toString());
-  keywords.push((i + 2014703221).toString());
+async function scrapeSite(keyword, i) {
+  const url = `https://www.loc.gov/item/${keyword}/`;
+
+  const { data } = await axios.get(url);
+  const $ = cheerio.load(data); // new addition
+  const lis = [];
+  const results = [];
+  $("div.preview").each((i, elem) => {
+    const imgSrc = $(elem).find("img").attr("src");
+    // const text = $(elem).find("span:first-child").text();
+    // results.push({ imgSrc, text });
+    results.push({ imgSrc });
+  });
+  $("div.item-cataloged-data").each((i, elem) => {
+    const li = $(elem).find("ul").text();
+    // const text = $(elem).find("span:first-child").text();
+    // results.push({ imgSrc, text });
+    lis.push({ li });
+  });
+
+  return { results, lis, i };
 }
 
-const images = [];
-let hope;
-let codeMoney = false;
+function download(uri, filename, callback) {
+  request.head(uri, function (err, res, body) {
+    console.log("content-type:", res.headers["content-type"]);
+    console.log("content-length:", res.headers["content-length"]);
 
-for (let key of keywords) {
-  images.push(new Image(key));
+    request(uri).pipe(fs.createWriteStream(filename)).on("close", callback);
+  });
 }
+
+function noSpace(array) {
+  const out = [];
+  let isLine = false;
+  for (let ele of array) {
+    if (ele.replace(/\s/g, "") !== "" && ele.replace(/\s/g, "") !== "-")
+      if (isLine) {
+        out.push("- ".concat("", ele.trim()));
+        isLine = false;
+      } else {
+        out.push(ele.trim());
+      }
+
+    if (ele.trim() === "-") isLine = true;
+    else false;
+  }
+  return out;
+}
+
+function isDone(images) {
+  for (let ele of images) {
+    if (!ele.done) return false;
+  }
+  return true;
+}
+
 async function updateImages(images) {
   for (let i = 0; i < images.length; i++) {
     scrapeSite(images[i].lccn, i)
@@ -123,7 +117,7 @@ async function updateImages(images) {
 
         let data = `${result.lis[0].li}`;
         let desc = data.split("\n");
-        hope = noSpace(desc);
+        let hope = noSpace(desc);
 
         hope.unshift(link);
         console.log(1, i);
@@ -150,15 +144,20 @@ async function updateImages(images) {
   }
   //   console.log(4, "done");
 }
-const p = new Promise(() => updateImages(images));
 
+const keywords = [];
+for (let i = 0; i < 10; i++) {
+  console.log((i + 2014703221).toString());
+  keywords.push((i + 2014703221).toString());
+}
+
+const images = [];
+
+for (let key of keywords) {
+  images.push(new Image(key));
+}
+
+const p = new Promise(() => updateImages(images));
 p.finally();
 
 console.log("what");
-
-function isDone(images) {
-  for (let ele of images) {
-    if (!ele.done) return false;
-  }
-  return true;
-}
