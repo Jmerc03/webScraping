@@ -1,7 +1,9 @@
 const axios = require("axios");
 const cheerio = require("cheerio"); // new addition
+const fs = require("fs"),
+  request = require("request");
 
-async function scrapeSite(keyword) {
+async function scrapeSite(keyword, i) {
   const url = `https://www.loc.gov/item/${keyword}/`;
 
   const { data } = await axios.get(url);
@@ -21,7 +23,15 @@ async function scrapeSite(keyword) {
     lis.push({ li });
   });
 
-  return { results, lis };
+  return { results, lis, i };
+}
+function download(uri, filename, callback) {
+  request.head(uri, function (err, res, body) {
+    console.log("content-type:", res.headers["content-type"]);
+    console.log("content-length:", res.headers["content-length"]);
+
+    request(uri).pipe(fs.createWriteStream(filename)).on("close", callback);
+  });
 }
 
 function noSpace(array) {
@@ -63,18 +73,17 @@ function Image(LCCN) {
   this.format = "";
   this.permalink = "";
   this.metaDataFormats = [];
+  this.done = false;
   this.pop = function (arr) {
     let i = 0;
     const notesArr = [];
     const metaArr = [];
     for (let key in this) {
-      console.log(key, arr[i]);
       if (arr[i].indexOf("-") === 0) {
         while (arr[i].indexOf("-") === 0) {
           notesArr.push(arr[i]);
           i++;
         }
-        // console.log("\n", notesArr, "\n");
         this[key] = notesArr;
       } else if (key === "metaDataFormats") {
         while (i < arr.length) {
@@ -82,6 +91,7 @@ function Image(LCCN) {
           i++;
         }
         this[key] = metaArr;
+        this.done = true;
         break;
       } else {
         this[key] = arr[i];
@@ -91,28 +101,64 @@ function Image(LCCN) {
   };
 }
 
-//array of object creation
+const keywords = [];
+for (let i = 0; i < 10; i++) {
+  console.log((i + 2014703221).toString());
+  keywords.push((i + 2014703221).toString());
+}
 
-const keyword = "2014703221"; // change with any keyword you want
+const images = [];
+let hope;
+let codeMoney = false;
 
-const num1 = new Image(keyword);
-console.log(num1);
+for (let key of keywords) {
+  images.push(new Image(key));
+}
+async function updateImages(images) {
+  for (let i = 0; i < images.length; i++) {
+    scrapeSite(images[i].lccn, i)
+      .then((result) => {
+        let link = `${result.results[0].imgSrc}`;
+        link = link.slice(0, -10).concat("", "v.jpg");
 
-scrapeSite(keyword)
-  .then((result) => {
-    let link = `${result.results[0].imgSrc}`;
-    link = link.slice(0, -10).concat("", "v.jpg");
-    // console.log(link);
+        let data = `${result.lis[0].li}`;
+        let desc = data.split("\n");
+        hope = noSpace(desc);
 
-    let data = `${result.lis[0].li}`;
-    // console.log(data);
-    const desc = data.split("\n");
-    // console.log(desc);
-    const hope = noSpace(desc);
-    // console.log(hope);
+        hope.unshift(link);
+        console.log(1, i);
+        images[i].pop(hope);
+      })
+      .finally(() => {
+        if (isDone(images)) {
+          console.log(images, "IT WORKSSS ???");
+          codeMoney = true;
+          for (let photo of images) {
+            console.log(photo.link);
+            download(
+              photo.link,
+              `/Users/softwaredev/Dev/webScraping/photos/${photo.lccn}.jpg`,
+              function () {
+                console.log("done");
+              }
+            );
+          }
+        }
+        // console.log(images);
+      });
+    // console.log(3, "what", i);
+  }
+  //   console.log(4, "done");
+}
+const p = new Promise(() => updateImages(images));
 
-    hope.unshift(link);
-    num1.pop(hope);
-    console.log(num1);
-  })
-  .catch((err) => console.log(err));
+p.finally();
+
+console.log("what");
+
+function isDone(images) {
+  for (let ele of images) {
+    if (!ele.done) return false;
+  }
+  return true;
+}
