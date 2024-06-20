@@ -11,7 +11,11 @@ async function scrapeSite(keyword, i) {
 
   const imageData = {};
   $("div.preview").each((i, elem) => {
-    const imgSrc = $(elem).find("img").attr("data-image-tablet");
+    const imgSrc = $(elem)
+      .find("img")
+      .attr("data-image-tablet")
+      .slice(0, $(elem).find("img").attr("data-image-tablet").indexOf(".jpg"))
+      .concat(".jpg");
     imageData["link"] = imgSrc;
   });
   $("div.item-cataloged-data").each(
@@ -92,7 +96,7 @@ async function updateImages(keywords) {
       })
       .finally(() => {
         if (finished === keywords.length) {
-          console.log(images, "IT WORKSSS ???");
+          //   console.log(images, "IT WORKSSS ???");
           codeMoney = true;
           for (let photo of images) {
             const titleWords = photo.title.split(" ");
@@ -102,7 +106,7 @@ async function updateImages(keywords) {
             } else {
               photoTitle = titleWords[0];
             }
-            console.log(photoTitle);
+            // console.log(photoTitle);
 
             download(
               photo.link,
@@ -132,9 +136,9 @@ const images = [];
 let finished = 0;
 
 const keywords = ["afc1982009_te_027a", "2014703222"];
-// for (let i = 0; i < 20; i++) {
-//   keywords.push((i + 2014703221).toString());
-// }
+for (let i = 0; i < 20; i++) {
+  keywords.push((i + 2014703221).toString());
+}
 
 const p = new Promise(() => updateImages(keywords));
 p.finally();
