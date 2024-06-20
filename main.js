@@ -6,17 +6,17 @@ const fs = require("fs"),
 function pop(arr, headers) {
   let i = 0;
   const image = {};
-  const notesArr = [];
   const metaArr = [];
   for (let head of headers) {
-    // console.log(arr[i], i, head);
     if (arr[i].indexOf("-") === 0) {
+      const notesArr = [];
       while (arr[i].indexOf("-") === 0) {
         notesArr.push(arr[i]);
         i++;
       }
+
       image[head] = notesArr;
-    } else if (head === "additional") {
+    } else if (head === headers[-1]) {
       while (i < arr.length) {
         metaArr.push(arr[i]);
         i++;
@@ -34,14 +34,15 @@ function pop(arr, headers) {
 
 async function scrapeSite(keyword, i) {
   const url = `https://www.loc.gov/item/${keyword}/`;
-  //   console.log(url);
+
   const { data } = await axios.get(url);
   const $ = cheerio.load(data); // new addition
   const uls = [];
   const h3s = [];
   const results = [];
   $("div.preview").each((i, elem) => {
-    const imgSrc = $(elem).find("img").attr("src");
+    const imgSrc = $(elem).find("img").attr("data-image-tablet");
+
     // const text = $(elem).find("span:first-child").text();
     // results.push({ imgSrc, text });
     results.push({ imgSrc });
@@ -49,8 +50,6 @@ async function scrapeSite(keyword, i) {
   $("div.item-cataloged-data").each((i, elem) => {
     const ul = $(elem).find("ul").text();
     const h3 = $(elem).find("h3").text();
-    // const text = $(elem).find("span:first-child").text();
-    // results.push({ imgSrc, text });
     h3s.push({ h3 });
     uls.push({ ul });
   });
@@ -60,9 +59,6 @@ async function scrapeSite(keyword, i) {
 
 function download(uri, filename, callback) {
   request.head(uri, function (err, res, body) {
-    // console.log("content-type:", res.headers["content-type"]);
-    // console.log("content-length:", res.headers["content-length"]);
-
     request(uri).pipe(fs.createWriteStream(filename)).on("close", callback);
   });
 }
@@ -97,11 +93,10 @@ async function updateImages(keywords) {
     scrapeSite(key)
       .then((result) => {
         let link = `${result.results[0].imgSrc}`
-          .slice(0, -10)
-          .concat("", "v.jpg");
+          .slice(0, result.results[0].imgSrc.indexOf(".jpg"))
+          .concat("", ".jpg");
 
         let headers = `${result.h3s[0].h3}`.split("\n");
-        // console.log(headers, " DSFSDF SD");
         for (let i = 0; i < headers.length; i++) {
           headers[i] = `${headers[i].trim().split(" ")[0]}`;
         }
@@ -112,15 +107,10 @@ async function updateImages(keywords) {
           }
         }
         headersBig.unshift("Link");
-        // console.log(headersBig);
 
         let data = noSpace(`${result.uls[0].ul}`.split("\n"));
         data.unshift(link);
-
-        // console.log(1, i);
-        // console.log(data);
         const thing = pop(data, headersBig);
-        // console.log(thing, "what");
         images.push(thing);
       })
       .then(() => {
@@ -131,20 +121,25 @@ async function updateImages(keywords) {
           console.log(images, "IT WORKSSS ???");
           codeMoney = true;
           for (let photo of images) {
-            // console.log(photo);
-            // console.log(photo.Link);
+            const titleWords = photo.Title.split(" ");
+            let photoTitle;
+            if (titleWords.length > 1) {
+              photoTitle = titleWords[0].concat("-", titleWords[1]);
+            } else {
+              photoTitle = titleWords[0];
+            }
+
             download(
               photo.Link,
-              `/Users/softwaredev/Dev/webScraping/photos/${photo.Library}.jpg`,
-              function () {
-                // console.log("done");
-              }
+              `/Users/softwaredev/Dev/webScraping/photos/${
+                photo.Library === undefined ? photoTitle : photo.Library
+              }.jpg`,
+              function () {}
             );
           }
         }
-        // console.log(images);
+
         let myJson = JSON.stringify(images);
-        // console.log(myJson);
 
         fs.writeFile("info.json", myJson, function (err) {
           if (err) {
@@ -152,22 +147,17 @@ async function updateImages(keywords) {
           }
         });
       });
-    // console.log(3, "what", i);
   }
-  //   console.log(4, "done");
 }
 
 const images = [];
 
 let finished = 0;
 
-const keywords = [];
+const keywords = ["afc1982009_te_027a"];
 for (let i = 0; i < 20; i++) {
-  console.log((i + 2014703221).toString());
   keywords.push((i + 2014703221).toString());
 }
 
 const p = new Promise(() => updateImages(keywords));
-p.finally(console.log("DKFKFKFKFKFKFKFKFKFKFKFKFKFKFKF\n\n\n"));
-
-console.log("what");
+p.finally();
