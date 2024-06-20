@@ -5,7 +5,7 @@ A javaScript/node.js webscrapper to pull images off of the Library of Congress' 
 Make sure you have [Node.js](https://nodejs.org/en) installed.
 then clone repo and run:
 ```
-npm install axios cheerio
+npm install axios cheerio fs request
 ```
 
 ## Usage
