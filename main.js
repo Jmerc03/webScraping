@@ -60,8 +60,8 @@ async function scrapeSite(keyword, i) {
 
 function download(uri, filename, callback) {
   request.head(uri, function (err, res, body) {
-    console.log("content-type:", res.headers["content-type"]);
-    console.log("content-length:", res.headers["content-length"]);
+    // console.log("content-type:", res.headers["content-type"]);
+    // console.log("content-length:", res.headers["content-length"]);
 
     request(uri).pipe(fs.createWriteStream(filename)).on("close", callback);
   });
@@ -131,18 +131,26 @@ async function updateImages(keywords) {
           console.log(images, "IT WORKSSS ???");
           codeMoney = true;
           for (let photo of images) {
-            console.log(photo);
-            console.log(photo.Link);
+            // console.log(photo);
+            // console.log(photo.Link);
             download(
               photo.Link,
               `/Users/softwaredev/Dev/webScraping/photos/${photo.Library}.jpg`,
               function () {
-                console.log("done");
+                // console.log("done");
               }
             );
           }
         }
         // console.log(images);
+        let myJson = JSON.stringify(images);
+        // console.log(myJson);
+
+        fs.writeFile("info.json", myJson, function (err) {
+          if (err) {
+            console.log(err);
+          }
+        });
       });
     // console.log(3, "what", i);
   }
@@ -160,6 +168,6 @@ for (let i = 0; i < 20; i++) {
 }
 
 const p = new Promise(() => updateImages(keywords));
-p.finally();
+p.finally(console.log("DKFKFKFKFKFKFKFKFKFKFKFKFKFKFKF\n\n\n"));
 
 console.log("what");
