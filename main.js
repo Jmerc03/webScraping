@@ -3,62 +3,62 @@ const cheerio = require("cheerio");
 const fs = require("fs"),
   request = require("request");
 
-function pop(arr, headers) {
-  let i = 0;
-  const image = {};
-  const metaArr = [];
-  for (let head of headers) {
-    if (arr[i].indexOf("-") === 0) {
-      const notesArr = [];
-      while (arr[i].indexOf("-") === 0) {
-        notesArr.push(arr[i]);
-        i++;
-      }
-
-      image[head] = notesArr;
-    } else if (head === headers[-1]) {
-      while (i < arr.length) {
-        metaArr.push(arr[i]);
-        i++;
-      }
-      image[head] = metaArr;
-      image.done = true;
-      break;
-    } else {
-      image[head] = arr[i];
-      i++;
-    }
-  }
-  return image;
-}
-
 async function scrapeSite(keyword, i) {
   const url = `https://www.loc.gov/item/${keyword}/`;
 
   const { data } = await axios.get(url);
   const $ = cheerio.load(data); // new addition
-  const uls = [];
-  const h3s = [];
-  const results = [];
+
+  const imageData = {};
   $("div.preview").each((i, elem) => {
-    const imgSrc = $(elem).find("img").attr("data-image-tablet");
-
-    // const text = $(elem).find("span:first-child").text();
-    // results.push({ imgSrc, text });
-    results.push({ imgSrc });
+    const imgSrc = $(elem)
+      .find("img")
+      .attr("data-image-tablet")
+      .slice(0, $(elem).find("img").attr("data-image-tablet").indexOf(".jpg"))
+      .concat(".jpg");
+    imageData["link"] = imgSrc;
   });
-  $("div.item-cataloged-data").each((i, elem) => {
-    const ul = $(elem).find("ul").text();
-    const h3 = $(elem).find("h3").text();
-    h3s.push({ h3 });
-    uls.push({ ul });
-  });
+  $("div.item-cataloged-data").each(
+    (i, elem1) => {
+      $(elem1)
+        .find("h3")
+        .each((j, elem2) => {
+          let key = `${$(elem2).attr("id").slice(5)}`;
+          let valueArray =
+            noSpace(
+              $(elem1)
+                .find(`ul[aria-labelledby*=${$(elem2).attr("id")}]`)
+                .text()
+                .trim()
+                .split("\n")
+            ).length >= 2;
+          let value = valueArray
+            ? noSpace(
+                $(elem1)
+                  .find(`ul[aria-labelledby*=${$(elem2).attr("id")}]`)
+                  .text()
+                  .trim()
+                  .split("\n")
+              )
+            : $(elem1)
+                .find(`ul[aria-labelledby*=${$(elem2).attr("id")}]`)
+                .text()
+                .trim();
+          value = value.indexOf("-") === 0 ? value.slice(1).trim() : value;
+          //   console.log(key, typeof key);
+          imageData[key] = value;
+        });
+      //   console.log("imageData:", imageData);
+    }
+    // console.log(ul);
+  );
 
-  return { results, uls, h3s, i };
+  return imageData;
 }
 
 function download(uri, filename, callback) {
   request.head(uri, function (err, res, body) {
+    // console.log("Erorr????");
     request(uri).pipe(fs.createWriteStream(filename)).on("close", callback);
   });
 }
@@ -67,16 +67,12 @@ function noSpace(array) {
   const out = [];
   let isLine = false;
   for (let ele of array) {
-    if (ele.replace(/\s/g, "") !== "" && ele.replace(/\s/g, "") !== "-")
-      if (isLine) {
-        out.push("- ".concat("", ele.trim()));
-        isLine = false;
-      } else {
-        out.push(ele.trim());
+    if (ele.replace(/\s/g, "") !== "" && ele.replace(/\s/g, "") !== "-") {
+      if (ele.chatAt == "-") {
+        ele = ele.slice(1).trim().replace("\n", "");
       }
-
-    if (ele.trim() === "-") isLine = true;
-    else false;
+      out.push(ele.trim());
+    }
   }
   return out;
 }
@@ -92,47 +88,32 @@ async function updateImages(keywords) {
   for (let key of keywords) {
     scrapeSite(key)
       .then((result) => {
-        let link = `${result.results[0].imgSrc}`
-          .slice(0, result.results[0].imgSrc.indexOf(".jpg"))
-          .concat("", ".jpg");
-
-        let headers = `${result.h3s[0].h3}`.split("\n");
-        for (let i = 0; i < headers.length; i++) {
-          headers[i] = `${headers[i].trim().split(" ")[0]}`;
-        }
-        let headersBig = [];
-        for (let title of headers) {
-          if (title != "") {
-            headersBig.push(title);
-          }
-        }
-        headersBig.unshift("Link");
-
-        let data = noSpace(`${result.uls[0].ul}`.split("\n"));
-        data.unshift(link);
-        const thing = pop(data, headersBig);
-        images.push(thing);
+        // console.log(result);
+        images.push(result);
       })
       .then(() => {
         finished++;
       })
       .finally(() => {
         if (finished === keywords.length) {
-          console.log(images, "IT WORKSSS ???");
+          //   console.log(images, "IT WORKSSS ???");
           codeMoney = true;
           for (let photo of images) {
-            const titleWords = photo.Title.split(" ");
+            const titleWords = photo.title.split(" ");
             let photoTitle;
             if (titleWords.length > 1) {
               photoTitle = titleWords[0].concat("-", titleWords[1]);
             } else {
               photoTitle = titleWords[0];
             }
+            // console.log(photoTitle);
 
             download(
-              photo.Link,
+              photo.link,
               `/Users/softwaredev/Dev/webScraping/photos/${
-                photo.Library === undefined ? photoTitle : photo.Library
+                photo.library_of_congress_control_number === undefined
+                  ? photoTitle
+                  : photo.library_of_congress_control_number
               }.jpg`,
               function () {}
             );
@@ -154,7 +135,7 @@ const images = [];
 
 let finished = 0;
 
-const keywords = ["afc1982009_te_027a"];
+const keywords = ["afc1982009_te_027a", "2014703222"];
 for (let i = 0; i < 20; i++) {
   keywords.push((i + 2014703221).toString());
 }
