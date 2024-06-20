@@ -41,19 +41,20 @@ async function scrapeSite(keyword, i) {
                 .text()
                 .trim();
           value = value.indexOf("-") === 0 ? value.slice(1).trim() : value;
-          console.log(key, typeof key);
+          //   console.log(key, typeof key);
           imageData[key] = value;
         });
-      console.log("imageData:", imageData);
+      //   console.log("imageData:", imageData);
     }
     // console.log(ul);
   );
 
-  return { imageData };
+  return imageData;
 }
 
 function download(uri, filename, callback) {
   request.head(uri, function (err, res, body) {
+    // console.log("Erorr????");
     request(uri).pipe(fs.createWriteStream(filename)).on("close", callback);
   });
 }
@@ -83,26 +84,8 @@ async function updateImages(keywords) {
   for (let key of keywords) {
     scrapeSite(key)
       .then((result) => {
-        let link = `${result.results[0].imgSrc}`
-          .slice(0, result.results[0].imgSrc.indexOf(".jpg"))
-          .concat("", ".jpg");
-
-        let headers = `${result.h3s[0].h3}`.split("\n");
-        for (let i = 0; i < headers.length; i++) {
-          headers[i] = `${headers[i].trim().split(" ")[0]}`;
-        }
-        let headersBig = [];
-        for (let title of headers) {
-          if (title != "") {
-            headersBig.push(title);
-          }
-        }
-        headersBig.unshift("Link");
-
-        let data = noSpace(`${result.uls[0].ul}`.split("\n"));
-        data.unshift(link);
-        const thing = pop(data, headersBig);
-        images.push(thing);
+        // console.log(result);
+        images.push(result);
       })
       .then(() => {
         finished++;
@@ -112,18 +95,21 @@ async function updateImages(keywords) {
           console.log(images, "IT WORKSSS ???");
           codeMoney = true;
           for (let photo of images) {
-            const titleWords = photo.Title.split(" ");
+            const titleWords = photo.title.split(" ");
             let photoTitle;
             if (titleWords.length > 1) {
               photoTitle = titleWords[0].concat("-", titleWords[1]);
             } else {
               photoTitle = titleWords[0];
             }
+            console.log(photoTitle);
 
             download(
-              photo.Link,
+              photo.link,
               `/Users/softwaredev/Dev/webScraping/photos/${
-                photo.Library === undefined ? photoTitle : photo.Library
+                photo.library_of_congress_control_number === undefined
+                  ? photoTitle
+                  : photo.library_of_congress_control_number
               }.jpg`,
               function () {}
             );
@@ -145,10 +131,7 @@ const images = [];
 
 let finished = 0;
 
-const keywords = [
-  //   "afc1982009_te_027a",
-  "2014703222",
-];
+const keywords = ["afc1982009_te_027a", "2014703222"];
 // for (let i = 0; i < 20; i++) {
 //   keywords.push((i + 2014703221).toString());
 // }
