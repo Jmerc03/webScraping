@@ -115,10 +115,13 @@ const images = [];
 
 let finished = 0;
 
-const keywords = ["afc1982009_te_027a", "2014703222"];
+const keywords = [];
+
+//keywords initialization CHANGE to download different images
 for (let i = 0; i < 20; i++) {
   keywords.push((i + 2014703221).toString());
 }
+keywords.push("afc1982009_te_027a");
 
 const p = new Promise(() => updateImages(keywords));
 p.finally();
