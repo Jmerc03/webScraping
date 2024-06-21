@@ -2,6 +2,7 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const fs = require("fs"),
   request = require("request");
+const path = require("path");
 
 //given a keyword (ex: a lccn) scrapes loc website and returns an object containing the link of the images and the header ids as keys and ils belonging to those keys
 async function scrapeSite(keyword) {
@@ -79,6 +80,15 @@ async function updateImages(keywords) {
               photoTitle = titleWords[0];
             }
 
+            if (!fs.existsSync("./photos")) {
+              fs.mkdir(path.join("photos"), (err) => {
+                if (err) {
+                  return console.error(err);
+                }
+                console.log("Directory created successfully!");
+              });
+            }
+
             download(
               photo.link,
               `./photos/${
@@ -91,6 +101,7 @@ async function updateImages(keywords) {
           }
 
           let myJson = JSON.stringify(images);
+
           fs.writeFile("info.json", myJson, function (err) {
             if (err) {
               console.log(err, "why");

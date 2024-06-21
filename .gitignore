@@ -130,6 +130,6 @@ dist
 .pnp.*
 
 #photos
-.photos/*
+.photos/
 
-.info.json
+info.json
