@@ -13,7 +13,7 @@ This happens often with notes.
 ## Installation
 
 Make sure you have [Node.js](https://nodejs.org/en) installed.
-then clone repo and run:
+Then clone repo and run:
 
 ```
 npm install axios cheerio fs request

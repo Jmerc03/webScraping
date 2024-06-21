@@ -133,3 +133,5 @@ dist
 .photos/
 
 info.json
+
+./node_modules
