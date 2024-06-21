@@ -2,7 +2,6 @@ const axios = require("axios");
 const cheerio = require("cheerio");
 const fs = require("fs"),
   request = require("request");
-const path = require("path");
 
 //given a keyword (ex: a lccn) scrapes loc website and returns an object containing the link of the images and the header ids as keys and ils belonging to those keys
 async function scrapeSite(keyword) {
@@ -81,7 +80,7 @@ async function updateImages(keywords) {
             }
 
             if (!fs.existsSync("./photos")) {
-              fs.mkdir(path.join("photos"), (err) => {
+              fs.mkdir("photos", (err) => {
                 if (err) {
                   return console.error(err);
                 }
