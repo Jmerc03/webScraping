@@ -2,7 +2,7 @@
 
 ## About
 
-A javaScript/node.js webscrapper to pull images off of the Library of Congress' website.
+A javaScript/node.js webscraper to pull images off of the Library of Congress' website.
 It creates a directory called photos and downloads photos there.
 
 It also creates a info.json with all information about that photo.
