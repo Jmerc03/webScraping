@@ -3,13 +3,15 @@ const cheerio = require("cheerio");
 const fs = require("fs"),
   request = require("request");
 
-async function scrapeSite(keyword, i) {
+//given a keyword (ex: a lccn) scrapes loc website and returns an object containing the link of the images and the header ids as keys and ils belonging to those keys
+async function scrapeSite(keyword) {
   const url = `https://www.loc.gov/item/${keyword}/`;
-
   const { data } = await axios.get(url);
-  const $ = cheerio.load(data); // new addition
+  const $ = cheerio.load(data);
 
   const imageData = {};
+
+  //grab image link
   $("div.preview").each((i, elem) => {
     const imgSrc = $(elem)
       .find("img")
@@ -18,54 +20,33 @@ async function scrapeSite(keyword, i) {
       .concat(".jpg");
     imageData["link"] = imgSrc;
   });
-  $("div.item-cataloged-data").each(
-    (i, elem1) => {
-      $(elem1)
-        .find("h3")
-        .each((j, elem2) => {
-          let key = `${$(elem2).attr("id").slice(5)}`;
-          let valueArray =
-            noSpace(
-              $(elem1)
-                .find(`ul[aria-labelledby*=${$(elem2).attr("id")}]`)
-                .text()
-                .trim()
-                .split("\n")
-            ).length >= 2;
-          let value = valueArray
-            ? noSpace(
-                $(elem1)
-                  .find(`ul[aria-labelledby*=${$(elem2).attr("id")}]`)
-                  .text()
-                  .trim()
-                  .split("\n")
-              )
-            : $(elem1)
-                .find(`ul[aria-labelledby*=${$(elem2).attr("id")}]`)
-                .text()
-                .trim();
-          value = value.indexOf("-") === 0 ? value.slice(1).trim() : value;
-          //   console.log(key, typeof key);
-          imageData[key] = value;
-        });
-      //   console.log("imageData:", imageData);
-    }
-    // console.log(ul);
-  );
 
+  //grab image data
+  $("div.item-cataloged-data").each((i, elem1) => {
+    $(elem1)
+      .find("h3")
+      .each((j, elem2) => {
+        let id = `${$(elem2).attr("id")}`;
+        let text = $(elem1).find(`ul[aria-labelledby*=${id}]`).text().trim();
+        let key = id.slice(5);
+        let valueArray = noSpace(text.split("\n")).length >= 2;
+        let value = valueArray ? noSpace(text.split("\n")) : text;
+        value = value.indexOf("-") === 0 ? value.slice(1).trim() : value;
+        imageData[key] = value;
+      });
+  });
   return imageData;
 }
 
 function download(uri, filename, callback) {
   request.head(uri, function (err, res, body) {
-    // console.log("Erorr????");
     request(uri).pipe(fs.createWriteStream(filename)).on("close", callback);
   });
 }
 
+//eleminates whitespace and empty array elems
 function noSpace(array) {
   const out = [];
-  let isLine = false;
   for (let ele of array) {
     if (ele.replace(/\s/g, "") !== "" && ele.replace(/\s/g, "") !== "-") {
       if (ele.chatAt == "-") {
@@ -77,18 +58,11 @@ function noSpace(array) {
   return out;
 }
 
-function isDone(images) {
-  for (let ele of images) {
-    if (!ele.done) return false;
-  }
-  return true;
-}
-
+// main body loop
 async function updateImages(keywords) {
   for (let key of keywords) {
     scrapeSite(key)
       .then((result) => {
-        // console.log(result);
         images.push(result);
       })
       .then(() => {
@@ -96,8 +70,6 @@ async function updateImages(keywords) {
       })
       .finally(() => {
         if (finished === keywords.length) {
-          //   console.log(images, "IT WORKSSS ???");
-          codeMoney = true;
           for (let photo of images) {
             const titleWords = photo.title.split(" ");
             let photoTitle;
@@ -106,11 +78,10 @@ async function updateImages(keywords) {
             } else {
               photoTitle = titleWords[0];
             }
-            // console.log(photoTitle);
 
             download(
               photo.link,
-              `/Users/softwaredev/Dev/webScraping/photos/${
+              `./photos/${
                 photo.library_of_congress_control_number === undefined
                   ? photoTitle
                   : photo.library_of_congress_control_number
@@ -118,15 +89,14 @@ async function updateImages(keywords) {
               function () {}
             );
           }
+
+          let myJson = JSON.stringify(images);
+          fs.writeFile("info.json", myJson, function (err) {
+            if (err) {
+              console.log(err, "why");
+            }
+          });
         }
-
-        let myJson = JSON.stringify(images);
-
-        fs.writeFile("info.json", myJson, function (err) {
-          if (err) {
-            console.log(err);
-          }
-        });
       });
   }
 }
